@@ -31,7 +31,7 @@ uniform_real_distribution<double> rand_h;
 
 ros::Publisher _local_map_pub;
 ros::Publisher _all_map_pub;
-ros::Publisher click_map_pub_;
+// ros::Publisher click_map_pub_;
 ros::Subscriber _odom_sub;
 
 vector<double> _state;
@@ -56,7 +56,7 @@ sensor_msgs::PointCloud2 globalMap_pcd;
 pcl::PointCloud<pcl::PointXYZ> cloudMap;
 
 sensor_msgs::PointCloud2 localMap_pcd;
-pcl::PointCloud<pcl::PointXYZ> clicked_cloud_;
+// pcl::PointCloud<pcl::PointXYZ> clicked_cloud_;
 
 void RandomMapGenerate() {
   pcl::PointXYZ pt_random;
@@ -76,8 +76,9 @@ void RandomMapGenerate() {
     double x, y, w, h;
     x = rand_x(eng);
     y = rand_y(eng);
-    w = rand_w(eng);
+    w = rand_w(eng);  // 丛林中竹子数目
 
+    // 确保起点安全
     if (sqrt(pow(x - _init_x, 2) + pow(y - _init_y, 2)) < 2.0) {
       i--;
       continue;
@@ -88,11 +89,13 @@ void RandomMapGenerate() {
       continue;
     }
 
+    // 修正x和y
     x = floor(x / _resolution) * _resolution + _resolution / 2.0;
     y = floor(y / _resolution) * _resolution + _resolution / 2.0;
 
-    int widNum = ceil(w / _resolution);
+    int widNum = ceil(w / _resolution); // 向上取整
 
+    // 生成小丛林
     for (int r = -widNum / 2.0; r < widNum / 2.0; r++)
       for (int s = -widNum / 2.0; s < widNum / 2.0; s++) {
         h = rand_h(eng);
@@ -113,6 +116,7 @@ void RandomMapGenerate() {
     y = rand_y(eng);
     z = rand_z_(eng);
 
+    // 确保起点安全
     if (sqrt(pow(x - _init_x, 2) + pow(y - _init_y, 2)) < 2.0) {
       i--;
       continue;
@@ -122,13 +126,14 @@ void RandomMapGenerate() {
       i--;
       continue;
     }
-
+    // 构建平移量
     x = floor(x / _resolution) * _resolution + _resolution / 2.0;
     y = floor(y / _resolution) * _resolution + _resolution / 2.0;
     z = floor(z / _resolution) * _resolution + _resolution / 2.0;
-
+    
     Eigen::Vector3d translate(x, y, z);
 
+    // 构建旋转矩阵
     double theta = rand_theta_(eng);
     Eigen::Matrix3d rotate;
     rotate << cos(theta), -sin(theta), 0.0, sin(theta), cos(theta), 0.0, 0, 0,
@@ -159,7 +164,7 @@ void RandomMapGenerate() {
           }
     }
   }
-
+  
   cloudMap.width = cloudMap.points.size();
   cloudMap.height = 1;
   cloudMap.is_dense = true;
@@ -171,139 +176,139 @@ void RandomMapGenerate() {
   _map_ok = true;
 }
 
-void rcvOdometryCallbck(const nav_msgs::Odometry odom) {
-  if (odom.child_frame_id == "X" || odom.child_frame_id == "O") return;
-  _has_odom = true;
+// void rcvOdometryCallbck(const nav_msgs::Odometry odom) {
+//   if (odom.child_frame_id == "X" || odom.child_frame_id == "O") return;
+//   _has_odom = true;
 
-  _state = {odom.pose.pose.position.x,
-            odom.pose.pose.position.y,
-            odom.pose.pose.position.z,
-            odom.twist.twist.linear.x,
-            odom.twist.twist.linear.y,
-            odom.twist.twist.linear.z,
-            0.0,
-            0.0,
-            0.0};
-}
+//   _state = {odom.pose.pose.position.x,
+//             odom.pose.pose.position.y,
+//             odom.pose.pose.position.z,
+//             odom.twist.twist.linear.x,
+//             odom.twist.twist.linear.y,
+//             odom.twist.twist.linear.z,
+//             0.0,
+//             0.0,
+//             0.0};
+// }
 
-int i = 0;
+// int i = 0;
 void pubSensedPoints() {
   // if (i < 10) {
   pcl::toROSMsg(cloudMap, globalMap_pcd);
   globalMap_pcd.header.frame_id = "world";
-  _all_map_pub.publish(globalMap_pcd);
+  _all_map_pub.publish(globalMap_pcd);  // 发送全局点云地图
   // }
 
-  return;
+  // return; // 此处返回；该模块仅仅生成全局地图
 
-  /* ---------- only publish points around current position ---------- */
-  if (!_map_ok || !_has_odom) return;
+  // /* ---------- only publish points around current position ---------- */
+  // if (!_map_ok || !_has_odom) return;
 
-  pcl::PointCloud<pcl::PointXYZ> localMap;
+  // pcl::PointCloud<pcl::PointXYZ> localMap;
 
-  pcl::PointXYZ searchPoint(_state[0], _state[1], _state[2]);
-  pointIdxRadiusSearch.clear();
-  pointRadiusSquaredDistance.clear();
+  // pcl::PointXYZ searchPoint(_state[0], _state[1], _state[2]);
+  // pointIdxRadiusSearch.clear();
+  // pointRadiusSquaredDistance.clear();
 
-  pcl::PointXYZ pt;
+  // pcl::PointXYZ pt;
 
-  if (isnan(searchPoint.x) || isnan(searchPoint.y) || isnan(searchPoint.z))
-    return;
+  // if (isnan(searchPoint.x) || isnan(searchPoint.y) || isnan(searchPoint.z))
+  //   return;
 
-  if (kdtreeLocalMap.radiusSearch(searchPoint, _sensing_range,
-                                  pointIdxRadiusSearch,
-                                  pointRadiusSquaredDistance) > 0) {
-    for (size_t i = 0; i < pointIdxRadiusSearch.size(); ++i) {
-      pt = cloudMap.points[pointIdxRadiusSearch[i]];
-      localMap.points.push_back(pt);
-    }
-  } else {
-    ROS_ERROR("[Map server] No obstacles .");
-    return;
-  }
+  // if (kdtreeLocalMap.radiusSearch(searchPoint, _sensing_range,
+  //                                 pointIdxRadiusSearch,
+  //                                 pointRadiusSquaredDistance) > 0) {
+  //   for (size_t i = 0; i < pointIdxRadiusSearch.size(); ++i) {
+  //     pt = cloudMap.points[pointIdxRadiusSearch[i]];
+  //     localMap.points.push_back(pt);
+  //   }
+  // } else {
+  //   ROS_ERROR("[Map server] No obstacles .");
+  //   return;
+  // }
 
-  localMap.width = localMap.points.size();
-  localMap.height = 1;
-  localMap.is_dense = true;
+  // localMap.width = localMap.points.size();
+  // localMap.height = 1;
+  // localMap.is_dense = true;
 
-  pcl::toROSMsg(localMap, localMap_pcd);
-  localMap_pcd.header.frame_id = "world";
-  _local_map_pub.publish(localMap_pcd);
+  // pcl::toROSMsg(localMap, localMap_pcd);
+  // localMap_pcd.header.frame_id = "world";
+  // _local_map_pub.publish(localMap_pcd);
 }
 
-void clickCallback(const geometry_msgs::PoseStamped& msg) {
-  double x = msg.pose.position.x;
-  double y = msg.pose.position.y;
-  double w = rand_w(eng);
-  double h;
-  pcl::PointXYZ pt_random;
+// void clickCallback(const geometry_msgs::PoseStamped& msg) {
+//   double x = msg.pose.position.x;
+//   double y = msg.pose.position.y;
+//   double w = rand_w(eng);
+//   double h;
+//   pcl::PointXYZ pt_random;
 
-  x = floor(x / _resolution) * _resolution + _resolution / 2.0;
-  y = floor(y / _resolution) * _resolution + _resolution / 2.0;
+//   x = floor(x / _resolution) * _resolution + _resolution / 2.0;
+//   y = floor(y / _resolution) * _resolution + _resolution / 2.0;
 
-  int widNum = ceil(w / _resolution);
+//   int widNum = ceil(w / _resolution);
 
-  for (int r = -widNum / 2.0; r < widNum / 2.0; r++)
-    for (int s = -widNum / 2.0; s < widNum / 2.0; s++) {
-      h = rand_h(eng);
-      int heiNum = ceil(h / _resolution);
-      for (int t = -1; t < heiNum; t++) {
-        pt_random.x = x + (r + 0.5) * _resolution + 1e-2;
-        pt_random.y = y + (s + 0.5) * _resolution + 1e-2;
-        pt_random.z = (t + 0.5) * _resolution + 1e-2;
-        clicked_cloud_.points.push_back(pt_random);
-        cloudMap.points.push_back(pt_random);
-      }
-    }
-  clicked_cloud_.width = clicked_cloud_.points.size();
-  clicked_cloud_.height = 1;
-  clicked_cloud_.is_dense = true;
+//   for (int r = -widNum / 2.0; r < widNum / 2.0; r++)
+//     for (int s = -widNum / 2.0; s < widNum / 2.0; s++) {
+//       h = rand_h(eng);
+//       int heiNum = ceil(h / _resolution);
+//       for (int t = -1; t < heiNum; t++) {
+//         pt_random.x = x + (r + 0.5) * _resolution + 1e-2;
+//         pt_random.y = y + (s + 0.5) * _resolution + 1e-2;
+//         pt_random.z = (t + 0.5) * _resolution + 1e-2;
+//         clicked_cloud_.points.push_back(pt_random);
+//         cloudMap.points.push_back(pt_random);
+//       }
+//     }
+//   clicked_cloud_.width = clicked_cloud_.points.size();
+//   clicked_cloud_.height = 1;
+//   clicked_cloud_.is_dense = true;
 
-  pcl::toROSMsg(clicked_cloud_, localMap_pcd);
-  localMap_pcd.header.frame_id = "world";
-  click_map_pub_.publish(localMap_pcd);
+//   pcl::toROSMsg(clicked_cloud_, localMap_pcd);
+//   localMap_pcd.header.frame_id = "world";
+//   click_map_pub_.publish(localMap_pcd);
 
-  cloudMap.width = cloudMap.points.size();
+//   cloudMap.width = cloudMap.points.size();
 
-  return;
-}
+//   return;
+// }
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "random_map_sensing");
   ros::NodeHandle n("~");
 
-  _local_map_pub = n.advertise<sensor_msgs::PointCloud2>("/map_generator/local_cloud", 1);
+  // _local_map_pub = n.advertise<sensor_msgs::PointCloud2>("/map_generator/local_cloud", 1);
   _all_map_pub = n.advertise<sensor_msgs::PointCloud2>("/map_generator/global_cloud", 1);
 
-  _odom_sub = n.subscribe("odometry", 50, rcvOdometryCallbck);
+  // _odom_sub = n.subscribe("odometry", 50, rcvOdometryCallbck);
 
-  click_map_pub_ =
-      n.advertise<sensor_msgs::PointCloud2>("/pcl_render_node/local_map", 1);
+  // click_map_pub_ =
+  //     n.advertise<sensor_msgs::PointCloud2>("/pcl_render_node/local_map", 1);
   // ros::Subscriber click_sub = n.subscribe("/goal", 10, clickCallback);
 
-  n.param("init_state_x", _init_x, 0.0);
-  n.param("init_state_y", _init_y, 0.0);
+  n.param("init_state_x", _init_x, 0.0);  // 无人机初始位置x
+  n.param("init_state_y", _init_y, 0.0);  // 无人机初始位置y
 
-  n.param("map/x_size", _x_size, 50.0);
-  n.param("map/y_size", _y_size, 50.0);
-  n.param("map/z_size", _z_size, 5.0);
-  n.param("map/obs_num", _obs_num, 30);
-  n.param("map/resolution", _resolution, 0.1);
-  n.param("map/circle_num", circle_num_, 30);
+  n.param("map/x_size", _x_size, 50.0);   // 地图大小x
+  n.param("map/y_size", _y_size, 50.0);   // 地图大小y
+  n.param("map/z_size", _z_size, 5.0);    // 地图大小z
+  n.param("map/obs_num", _obs_num, 30);   // 柱形障碍物数目
+  n.param("map/resolution", _resolution, 0.1);  // 地图分辨率
+  n.param("map/circle_num", circle_num_, 30);   // 环形障碍物数目
 
-  n.param("ObstacleShape/lower_rad", _w_l, 0.3);
-  n.param("ObstacleShape/upper_rad", _w_h, 0.8);
-  n.param("ObstacleShape/lower_hei", _h_l, 3.0);
-  n.param("ObstacleShape/upper_hei", _h_h, 7.0);
+  n.param("ObstacleShape/lower_rad", _w_l, 0.3);  // 柱形障碍物半径下限
+  n.param("ObstacleShape/upper_rad", _w_h, 0.8);  // 柱形障碍物半径上限
+  n.param("ObstacleShape/lower_hei", _h_l, 3.0);  // 柱形障碍物高度下限
+  n.param("ObstacleShape/upper_hei", _h_h, 7.0);  // 柱形障碍物高度上限
 
-  n.param("ObstacleShape/radius_l", radius_l_, 7.0);
-  n.param("ObstacleShape/radius_h", radius_h_, 7.0);
-  n.param("ObstacleShape/z_l", z_l_, 7.0);
-  n.param("ObstacleShape/z_h", z_h_, 7.0);
-  n.param("ObstacleShape/theta", theta_, 7.0);
+  n.param("ObstacleShape/radius_l", radius_l_, 7.0);  // 环形障碍物半径下限
+  n.param("ObstacleShape/radius_h", radius_h_, 7.0);  // 环形障碍物半径上限
+  n.param("ObstacleShape/z_l", z_l_, 7.0);            // 环形障碍物高度下限
+  n.param("ObstacleShape/z_h", z_h_, 7.0);            // 环形障碍物高度上限
+  n.param("ObstacleShape/theta", theta_, 7.0);        // ？
 
-  n.param("sensing/radius", _sensing_range, 10.0);
-  n.param("sensing/radius", _sense_rate, 10.0);
+  n.param("sensing/radius", _sensing_range, 10.0);    // 感知半径
+  n.param("sensing/radius", _sense_rate, 10.0);       // 感知频率
 
   _x_l = -_x_size / 2.0;
   _x_h = +_x_size / 2.0;
