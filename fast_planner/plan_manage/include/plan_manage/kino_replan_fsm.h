@@ -77,8 +77,8 @@ private:
   enum TARGET_TYPE { MANUAL_TARGET = 1, PRESET_TARGET = 2, REFENCE_PATH = 3 };
 
   /* planning utils */
-  FastPlannerManager::Ptr planner_manager_;
-  PlanningVisualization::Ptr visualization_;
+  FastPlannerManager::Ptr planner_manager_;   // 前后端规划
+  PlanningVisualization::Ptr visualization_;  // 轨迹可视化
 
   /* parameters */
   int target_type_;  // 1 mannual select, 2 hard code
@@ -87,8 +87,10 @@ private:
   int waypoint_num_;
 
   /* planning data */
-  bool trigger_, have_target_, have_odom_;
-  FSM_EXEC_STATE exec_state_;
+  bool trigger_;      // 是否有航点输入
+  bool have_target_;  // 是否有航点输入
+  bool have_odom_;    // 是否有里程计
+  FSM_EXEC_STATE exec_state_; // 当前状态
 
   Eigen::Vector3d odom_pos_, odom_vel_;  // odometry state
   Eigen::Quaterniond odom_orient_;
@@ -105,6 +107,7 @@ private:
 
   /* helper functions */
   bool callKinodynamicReplan();        // front-end and back-end method
+  // 无实现
   bool callTopologicalTraj(int step);  // topo path guided gradient-based
                                        // optimization; 1: new, 2: replan
   void changeFSMExecState(FSM_EXEC_STATE new_state, string pos_call);

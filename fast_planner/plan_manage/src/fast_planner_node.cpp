@@ -29,10 +29,10 @@
 #include <plan_manage/kino_replan_fsm.h>
 #include <plan_manage/topo_replan_fsm.h>
 
-#include <plan_manage/backward.hpp>
-namespace backward {
-backward::SignalHandling sh;
-}
+// #include <plan_manage/backward.hpp>
+// namespace backward {
+// backward::SignalHandling sh;
+// }
 
 using namespace fast_planner;
 
