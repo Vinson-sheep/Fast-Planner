@@ -14,8 +14,8 @@ public:
   {
     Eigen::Vector3d x;
     Eigen::Vector3d v;
-    Eigen::Matrix3d R;
-    Eigen::Vector3d omega;
+    Eigen::Matrix3d R;  // 旋转矩阵
+    Eigen::Vector3d omega;  // 三轴角速度（什么坐标系？）
     Eigen::Array4d  motor_rpm;
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
   };
@@ -53,16 +53,16 @@ public:
   void setMotorTimeConstant(double k);
 
   const Eigen::Vector3d& getExternalForce(void) const;
-  void setExternalForce(const Eigen::Vector3d& force);
+  void setExternalForce(const Eigen::Vector3d& force);   // ?
 
   const Eigen::Vector3d& getExternalMoment(void) const;
-  void setExternalMoment(const Eigen::Vector3d& moment);
+  void setExternalMoment(const Eigen::Vector3d& moment); // ?
 
   double getMaxRPM(void) const;
-  void setMaxRPM(double max_rpm);
+  void setMaxRPM(double max_rpm); // 最大转速
 
   double getMinRPM(void) const;
-  void setMinRPM(double min_rpm);
+  void setMinRPM(double min_rpm); // 最小转速
 
   // Inputs are desired RPM for the motors
   // Rotor numbering is:
@@ -76,7 +76,7 @@ public:
   void step(double dt);
 
   // For internal use, but needs to be public for odeint
-  typedef boost::array<double, 22> InternalState;
+  typedef boost::array<double, 22> InternalState; // 就是状态的一维表示
   void operator()(const Quadrotor::InternalState& x,
                   Quadrotor::InternalState&       dxdt, const double /* t */);
 
@@ -85,17 +85,17 @@ public:
 private:
   void updateInternalState(void);
 
-  double          alpha0; // AOA
+  double          alpha0; // AOA ？？
   double          g_;     // gravity
   double          mass_;
-  Eigen::Matrix3d J_; // Inertia
-  double          kf_;
-  double          km_;
-  double          prop_radius_;
-  double          arm_length_;
-  double          motor_time_constant_; // unit: sec
-  double          max_rpm_;
-  double          min_rpm_;
+  Eigen::Matrix3d J_; // Inertia 转动惯量
+  double          kf_;  // 拉力系数
+  double          km_;  // 扭力系数
+  double          prop_radius_; // 桨叶半径
+  double          arm_length_;  // 臂长
+  double          motor_time_constant_; // unit: sec ？？
+  double          max_rpm_; // 最大转速
+  double          min_rpm_; // 最小转速
 
   Quadrotor::State state_;
 

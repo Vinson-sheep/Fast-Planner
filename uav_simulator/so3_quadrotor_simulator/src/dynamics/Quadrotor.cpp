@@ -99,6 +99,7 @@ void
 Quadrotor::operator()(const Quadrotor::InternalState& x,
                       Quadrotor::InternalState& dxdt, const double /* t */)
 {
+  // 重建状态数据结构
   State cur_state;
   for (int i = 0; i < 3; i++)
   {
