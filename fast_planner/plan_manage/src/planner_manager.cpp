@@ -103,7 +103,7 @@ bool FastPlannerManager::checkTrajCollision(double& distance) {
   double          radius = 0.0;
   Eigen::Vector3d fut_pt;
   double          fut_t = 0.02;
-
+  // 基于时间抽样
   while (radius < 6.0 && t_now + fut_t < local_data_.duration_) {
     fut_pt = local_data_.position_traj_.evaluateDeBoor(tm + t_now + fut_t);
 
@@ -127,7 +127,7 @@ bool FastPlannerManager::checkTrajCollision(double& distance) {
 bool FastPlannerManager::kinodynamicReplan(Eigen::Vector3d start_pt, Eigen::Vector3d start_vel,
                                            Eigen::Vector3d start_acc, Eigen::Vector3d end_pt,
                                            Eigen::Vector3d end_vel) {
-
+                                            // 没有末端加速度
   std::cout << "[kino replan]: -----------------------" << std::endl;
   cout << "start: " << start_pt.transpose() << ", " << start_vel.transpose() << ", "
        << start_acc.transpose() << "\ngoal:" << end_pt.transpose() << ", " << end_vel.transpose()
@@ -183,12 +183,13 @@ bool FastPlannerManager::kinodynamicReplan(Eigen::Vector3d start_pt, Eigen::Vect
   vector<Eigen::Vector3d> point_set, start_end_derivatives;
   kino_path_finder_->getSamples(ts, point_set, start_end_derivatives);
 
+  // 获取控制点
   Eigen::MatrixXd ctrl_pts;
   NonUniformBspline::parameterizeToBspline(ts, point_set, start_end_derivatives, ctrl_pts);
   NonUniformBspline init(ctrl_pts, 3, ts);
 
   // bspline trajectory optimization
-
+  // B样条优化
   t1 = ros::Time::now();
 
   int cost_function = BsplineOptimizer::NORMAL_PHASE;
@@ -201,6 +202,7 @@ bool FastPlannerManager::kinodynamicReplan(Eigen::Vector3d start_pt, Eigen::Vect
 
   t_opt = (ros::Time::now() - t1).toSec();
 
+  // 迭代时间优化
   // iterative time adjustment
 
   t1                    = ros::Time::now();
@@ -248,7 +250,7 @@ bool FastPlannerManager::kinodynamicReplan(Eigen::Vector3d start_pt, Eigen::Vect
 // !SECTION
 
 // SECTION topological replanning
-
+// 没有用上
 bool FastPlannerManager::planGlobalTraj(const Eigen::Vector3d& start_pos) {
   plan_data_.clearTopoPaths();
 
@@ -320,7 +322,7 @@ bool FastPlannerManager::planGlobalTraj(const Eigen::Vector3d& start_pos) {
 
   return true;
 }
-
+// 拓扑规划
 bool FastPlannerManager::topoReplan(bool collide) {
   ros::Time t1, t2;
 
@@ -395,7 +397,7 @@ bool FastPlannerManager::topoReplan(bool collide) {
   updateTrajInfo();
   return true;
 }
-
+// 从不同轨迹中选择最优轨迹
 void FastPlannerManager::selectBestTraj(NonUniformBspline& traj) {
   // sort by jerk
   vector<NonUniformBspline>& trajs = plan_data_.topo_traj_pos2_;
@@ -403,7 +405,7 @@ void FastPlannerManager::selectBestTraj(NonUniformBspline& traj) {
        [&](NonUniformBspline& tj1, NonUniformBspline& tj2) { return tj1.getJerk() < tj2.getJerk(); });
   traj = trajs[0];
 }
-
+// ？？
 void FastPlannerManager::refineTraj(NonUniformBspline& best_traj, double& time_inc) {
   ros::Time t1 = ros::Time::now();
   time_inc     = 0.0;
@@ -425,7 +427,7 @@ void FastPlannerManager::refineTraj(NonUniformBspline& best_traj, double& time_i
   ROS_WARN_STREAM("[Refine]: cost " << (ros::Time::now() - t1).toSec()
                                     << " seconds, time change is: " << time_inc);
 }
-
+// PAV T
 void FastPlannerManager::updateTrajInfo() {
   local_data_.velocity_traj_     = local_data_.position_traj_.getDerivative();
   local_data_.acceleration_traj_ = local_data_.velocity_traj_.getDerivative();
@@ -433,7 +435,7 @@ void FastPlannerManager::updateTrajInfo() {
   local_data_.duration_          = local_data_.position_traj_.getTimeSum();
   local_data_.traj_id_ += 1;
 }
-
+// ？？
 void FastPlannerManager::reparamBspline(NonUniformBspline& bspline, double ratio,
                                         Eigen::MatrixXd& ctrl_pts, double& dt, double& time_inc) {
   int    prev_num    = bspline.getControlPoint().rows();
@@ -456,7 +458,7 @@ void FastPlannerManager::reparamBspline(NonUniformBspline& bspline, double ratio
                                            ctrl_pts);
   // ROS_WARN("prev: %d, new: %d", prev_num, ctrl_pts.rows());
 }
-
+// ？？
 void FastPlannerManager::optimizeTopoBspline(double start_t, double duration,
                                              vector<Eigen::Vector3d> guide_path, int traj_id) {
   ros::Time t1;
@@ -507,7 +509,7 @@ void FastPlannerManager::optimizeTopoBspline(double start_t, double duration,
   tm3 = (ros::Time::now() - t1).toSec();
   ROS_INFO("optimization %d cost %lf, %lf, %lf seconds.", traj_id, tm1, tm2, tm3);
 }
-
+// ？？
 Eigen::MatrixXd FastPlannerManager::reparamLocalTraj(double start_t, double& dt, double& duration) {
   /* get the sample points local traj within radius */
 
@@ -526,7 +528,7 @@ Eigen::MatrixXd FastPlannerManager::reparamLocalTraj(double start_t, double& dt,
 
   return ctrl_pts;
 }
-
+// ？？
 Eigen::MatrixXd FastPlannerManager::reparamLocalTraj(double start_t, double duration, int seg_num,
                                                      double& dt) {
   vector<Eigen::Vector3d> point_set;
@@ -542,7 +544,7 @@ Eigen::MatrixXd FastPlannerManager::reparamLocalTraj(double start_t, double dura
 
   return ctrl_pts;
 }
-
+// 
 void FastPlannerManager::findCollisionRange(vector<Eigen::Vector3d>& colli_start,
                                             vector<Eigen::Vector3d>& colli_end,
                                             vector<Eigen::Vector3d>& start_pts,
@@ -676,6 +678,7 @@ void FastPlannerManager::planYaw(const Eigen::Vector3d& start_yaw) {
   std::cout << "plan heading: " << (ros::Time::now() - t1).toSec() << std::endl;
 }
 
+// 最短角度
 void FastPlannerManager::calcNextYaw(const double& last_yaw, double& yaw) {
   // round yaw to [-PI, PI]
 
