@@ -624,13 +624,14 @@ void FastPlannerManager::planYaw(const Eigen::Vector3d& start_yaw) {
   vector<int>             waypt_idx;
 
   // seg_num -> seg_num - 1 points for constraint excluding the boundary states
-
+  // 按时间抽样，然后向前看2秒，计算对应偏航
+  // 忽略边界条件？
   for (int i = 0; i < seg_num; ++i) {
-    double          tc = i * dt_yaw;
+    double          tc = i * dt_yaw;  // 当前时间
     Eigen::Vector3d pc = pos.evaluateDeBoorT(tc);
-    double          tf = min(duration, tc + forward_t);
+    double          tf = min(duration, tc + forward_t); // 后两秒的时间
     Eigen::Vector3d pf = pos.evaluateDeBoorT(tf);
-    Eigen::Vector3d pd = pf - pc;
+    Eigen::Vector3d pd = pf - pc; // 前后位置差
 
     Eigen::Vector3d waypt;
     if (pd.norm() > 1e-6) {
@@ -645,30 +646,33 @@ void FastPlannerManager::planYaw(const Eigen::Vector3d& start_yaw) {
   }
 
   // calculate initial control points with boundary state constraints
-
+  // 计算边界条件？
   Eigen::MatrixXd yaw(seg_num + 3, 1);
   yaw.setZero();
 
   Eigen::Matrix3d states2pts;
   states2pts << 1.0, -dt_yaw, (1 / 3.0) * dt_yaw * dt_yaw, 1.0, 0.0, -(1 / 6.0) * dt_yaw * dt_yaw, 1.0,
       dt_yaw, (1 / 3.0) * dt_yaw * dt_yaw;
-  yaw.block(0, 0, 3, 1) = states2pts * start_yaw;
+  yaw.block(0, 0, 3, 1) = states2pts * start_yaw; // ？
 
+  // 根据
   Eigen::Vector3d end_v = local_data_.velocity_traj_.evaluateDeBoorT(duration - 0.1);
-  Eigen::Vector3d end_yaw(atan2(end_v(1), end_v(0)), 0, 0);
+  Eigen::Vector3d end_yaw(atan2(end_v(1), end_v(0)), 0, 0); // 根据末端方向确定
   calcNextYaw(last_yaw, end_yaw(0));
-  yaw.block(seg_num, 0, 3, 1) = states2pts * end_yaw;
+  yaw.block(seg_num, 0, 3, 1) = states2pts * end_yaw;  // ？
 
   // solve
+  // 偏航规划
   bspline_optimizers_[1]->setWaypoints(waypts, waypt_idx);
   int cost_func = BsplineOptimizer::SMOOTHNESS | BsplineOptimizer::WAYPOINTS;
   yaw           = bspline_optimizers_[1]->BsplineOptimizeTraj(yaw, dt_yaw, cost_func, 1, 1);
 
-  // update traj info
+  // 局部规划数据
   local_data_.yaw_traj_.setUniformBspline(yaw, 3, dt_yaw);
-  local_data_.yawdot_traj_    = local_data_.yaw_traj_.getDerivative();
-  local_data_.yawdotdot_traj_ = local_data_.yawdot_traj_.getDerivative();
+  local_data_.yawdot_traj_    = local_data_.yaw_traj_.getDerivative();  // 一阶导数
+  local_data_.yawdotdot_traj_ = local_data_.yawdot_traj_.getDerivative(); // 二阶导数
 
+  // 中间过程数据
   vector<double> path_yaw;
   for (int i = 0; i < waypts.size(); ++i) path_yaw.push_back(waypts[i][0]);
   plan_data_.path_yaw_    = path_yaw;
