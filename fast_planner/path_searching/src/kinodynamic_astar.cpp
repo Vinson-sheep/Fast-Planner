@@ -633,10 +633,12 @@ std::vector<Eigen::Vector3d> KinodynamicAstar::getKinoTraj(double delta_t)
   return state_list;
 }
 
+
 void KinodynamicAstar::getSamples(double& ts, vector<Eigen::Vector3d>& point_set,
                                   vector<Eigen::Vector3d>& start_end_derivatives)
 {
   /* ---------- path duration ---------- */
+  // 从前端搜索中获取初始时间分配？
   double T_sum = 0.0;
   if (is_shot_succ_)
     T_sum += t_shot_;
@@ -651,6 +653,7 @@ void KinodynamicAstar::getSamples(double& ts, vector<Eigen::Vector3d>& point_set
   // Calculate boundary vel and acc
   Eigen::Vector3d end_vel, end_acc;
   double t;
+  // 如果shot成功，则从shot轨迹上获取数据
   if (is_shot_succ_)
   {
     t = t_shot_;
@@ -661,20 +664,24 @@ void KinodynamicAstar::getSamples(double& ts, vector<Eigen::Vector3d>& point_set
       end_acc(dim) = 2 * coe(2) + 6 * coe(3) * t_shot_;
     }
   }
+  // 否则，从动力学末端获取数据
   else
   {
+    // 直接获取动力学A*末端点的
     t = path_nodes_.back()->duration;
     end_vel = node->state.tail(3);
     end_acc = path_nodes_.back()->input;
   }
 
   // Get point samples
+  // 此处微调时间间隔
   int seg_num = floor(T_sum / ts);
   seg_num = max(8, seg_num);
   ts = T_sum / double(seg_num);
   bool sample_shot_traj = is_shot_succ_;
   node = path_nodes_.back();
 
+  // 从后往前按时间ts进行采样
   for (double ti = T_sum; ti > -1e-5; ti -= ts)
   {
     if (sample_shot_traj)
@@ -725,6 +732,7 @@ void KinodynamicAstar::getSamples(double& ts, vector<Eigen::Vector3d>& point_set
   }
   reverse(point_set.begin(), point_set.end());
 
+  // 不太理解为何起始加速度也需要计算
   // calculate start acc
   Eigen::Vector3d start_acc;
   if (path_nodes_.back()->parent == NULL)

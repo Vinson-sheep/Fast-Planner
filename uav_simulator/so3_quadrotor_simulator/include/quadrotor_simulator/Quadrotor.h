@@ -7,6 +7,8 @@
 namespace QuadrotorSimulator
 {
 
+// 此处实现与ego-planner不一样
+
 class Quadrotor
 {
 public:

@@ -124,15 +124,17 @@ bool FastPlannerManager::checkTrajCollision(double& distance) {
 
 // SECTION kinodynamic replanning
 
+// 1. 由动力学A*进行前端搜索，并按时间抽样航点，解决时间分配问题
+// 2. 使用均匀B样条完成后端轨迹优化
 bool FastPlannerManager::kinodynamicReplan(Eigen::Vector3d start_pt, Eigen::Vector3d start_vel,
                                            Eigen::Vector3d start_acc, Eigen::Vector3d end_pt,
                                            Eigen::Vector3d end_vel) {
-                                            // 没有末端加速度
+  // 没有末端加速度
   std::cout << "[kino replan]: -----------------------" << std::endl;
   cout << "start: " << start_pt.transpose() << ", " << start_vel.transpose() << ", "
        << start_acc.transpose() << "\ngoal:" << end_pt.transpose() << ", " << end_vel.transpose()
        << endl;
-
+  // 为什么很近就不能规划？这样末端是不精确的
   if ((start_pt - end_pt).norm() < 0.2) {
     cout << "Close goal" << endl;
     return false;
@@ -153,12 +155,13 @@ bool FastPlannerManager::kinodynamicReplan(Eigen::Vector3d start_pt, Eigen::Vect
 
   kino_path_finder_->reset();
 
+  // 先用动力学A*进行搜索
   int status = kino_path_finder_->search(start_pt, start_vel, start_acc, end_pt, end_vel, true);
 
   if (status == KinodynamicAstar::NO_PATH) {
     cout << "[kino replan]: kinodynamic search fail!" << endl;
 
-    // retry searching with discontinuous initial state
+    // 使用一般A*进行搜索
     kino_path_finder_->reset();
     status = kino_path_finder_->search(start_pt, start_vel, start_acc, end_pt, end_vel, false);
 

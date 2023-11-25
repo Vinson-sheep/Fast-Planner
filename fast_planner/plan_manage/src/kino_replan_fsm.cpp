@@ -154,7 +154,7 @@ void KinoReplanFSM::execFSMCallback(const ros::TimerEvent& e) {
       break;
     }
 
-    case GEN_NEW_TRAJ: {
+    case GEN_NEW_TRAJ: { // 参考当前状态，生成轨迹
       // 记录初始状态
       start_pt_  = odom_pos_;
       start_vel_ = odom_vel_;
@@ -210,7 +210,7 @@ void KinoReplanFSM::execFSMCallback(const ros::TimerEvent& e) {
       break;
     }
 
-    case REPLAN_TRAJ: {
+    case REPLAN_TRAJ: { // 参考当前轨迹，生成新轨迹
       LocalTrajData* info     = &planner_manager_->local_data_;
       ros::Time      time_now = ros::Time::now();
       double         t_cur    = (time_now - info->start_time_).toSec();
@@ -319,7 +319,7 @@ void KinoReplanFSM::checkCollisionCallback(const ros::TimerEvent& e) {
 }
 
 bool KinoReplanFSM::callKinodynamicReplan() {
-  // 前后端重规划
+  // 前后端重规划 （末端速度一直为0）
   bool plan_success =
       planner_manager_->kinodynamicReplan(start_pt_, start_vel_, start_acc_, end_pt_, end_vel_);
 
