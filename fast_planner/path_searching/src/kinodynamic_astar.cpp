@@ -146,6 +146,8 @@ int KinodynamicAstar::search(Eigen::Vector3d start_pt, Eigen::Vector3d start_v, 
     double pro_t;
     vector<Eigen::Vector3d> inputs;
     vector<double> durations;
+
+    // 生成一系列控制量
     if (init_search)
     {
       inputs.push_back(start_acc_);
@@ -168,9 +170,13 @@ int KinodynamicAstar::search(Eigen::Vector3d start_pt, Eigen::Vector3d start_v, 
     }
 
     // cout << "cur state:" << cur_state.head(3).transpose() << endl;
+
+    // 遍历所有控制量
     for (int i = 0; i < inputs.size(); ++i)
       for (int j = 0; j < durations.size(); ++j)
       {
+
+        // 生成目标状态
         um = inputs[i];
         double tau = durations[j];
         stateTransit(cur_state, pro_state, um, tau);
@@ -178,10 +184,14 @@ int KinodynamicAstar::search(Eigen::Vector3d start_pt, Eigen::Vector3d start_v, 
 
         Eigen::Vector3d pro_pos = pro_state.head(3);
 
+        // 判断是否已经存在该结点
         // Check if in close set
         Eigen::Vector3i pro_id = posToIndex(pro_pos);
         int pro_t_id = timeToIndex(pro_t);
         PathNodePtr pro_node = dynamic ? expanded_nodes_.find(pro_id, pro_t_id) : expanded_nodes_.find(pro_id);
+
+        // 如果存在结点，且该结点在闭集里，跳过
+        // 这个实现会导致环的消失！！！
         if (pro_node != NULL && pro_node->node_state == IN_CLOSE_SET)
         {
           if (init_search)
@@ -189,6 +199,7 @@ int KinodynamicAstar::search(Eigen::Vector3d start_pt, Eigen::Vector3d start_v, 
           continue;
         }
 
+        // 如果超过了最大速度，跳过
         // Check maximal velocity
         Eigen::Vector3d pro_v = pro_state.tail(3);
         if (fabs(pro_v(0)) > max_vel_ || fabs(pro_v(1)) > max_vel_ || fabs(pro_v(2)) > max_vel_)
@@ -198,6 +209,7 @@ int KinodynamicAstar::search(Eigen::Vector3d start_pt, Eigen::Vector3d start_v, 
           continue;
         }
 
+        // 如果与当前结点处于同一结点，跳过
         // Check not in the same voxel
         Eigen::Vector3i diff = pro_id - cur_node->index;
         int diff_time = pro_t_id - cur_node->time_idx;
@@ -208,6 +220,7 @@ int KinodynamicAstar::search(Eigen::Vector3d start_pt, Eigen::Vector3d start_v, 
           continue;
         }
 
+        // 如果当前结点被占据，跳过
         // Check safety
         Eigen::Vector3d pos;
         Eigen::Matrix<double, 6, 1> xt;
@@ -234,13 +247,16 @@ int KinodynamicAstar::search(Eigen::Vector3d start_pt, Eigen::Vector3d start_v, 
         tmp_g_score = (um.squaredNorm() + w_time_) * tau + cur_node->g_score;
         tmp_f_score = tmp_g_score + lambda_heu_ * estimateHeuristic(pro_state, end_state, time_to_goal);
 
+        // 遍历所有由当前结点生成的子节点
         // Compare nodes expanded from the same parent
         bool prune = false;
         for (int j = 0; j < tmp_expand_nodes.size(); ++j)
         {
+          // 如果新结点与其他子节点处于统一结点，且迭代时间相同
           PathNodePtr expand_node = tmp_expand_nodes[j];
           if ((pro_id - expand_node->index).norm() == 0 && ((!dynamic) || pro_t_id == expand_node->time_idx))
           {
+            // 如果总代价低于旧结点，直接修改expand_node为新结点
             prune = true;
             if (tmp_f_score < expand_node->f_score)
             {
@@ -256,6 +272,7 @@ int KinodynamicAstar::search(Eigen::Vector3d start_pt, Eigen::Vector3d start_v, 
           }
         }
 
+        // 如果没有覆盖同一批的某个旧结点，且不在开放集，说明新结点需要创建
         // This node end up in a voxel different from others
         if (!prune)
         {
@@ -291,8 +308,12 @@ int KinodynamicAstar::search(Eigen::Vector3d start_pt, Eigen::Vector3d start_v, 
               return NO_PATH;
             }
           }
+
+          // 如果没有覆盖同一批的某个旧结点，且在开放集，说明新结点不需要创建
           else if (pro_node->node_state == IN_OPEN_SET)
           {
+            // 直接修改开放集中的数据？
+            // 这样可能会打乱open_set_的排序
             if (tmp_g_score < pro_node->g_score)
             {
               // pro_node->index = pro_id;
